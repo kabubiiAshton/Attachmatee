@@ -5,25 +5,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AttachMate Web</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #f7fafc; color: #1f2937; }
-    header { background: #2563eb; color: white; padding: 1.5rem 1rem; text-align: center; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #f7fafc; color: #1f2937; font-size: 16px; }
+    header { background: #2563eb; color: white; padding: 1rem; text-align: center; }
+    header h1 { margin: 0 0 0.5rem; font-size: 1.5rem; }
+    header p { margin: 0; font-size: 0.9rem; }
     .page { max-width: 1080px; margin: 0 auto; padding: 1rem; }
     .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
     .box { background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
     h1, h2, h3 { margin: 0 0 1rem; }
+    h2 { font-size: 1.3rem; }
+    h3 { font-size: 1.1rem; }
     button, input, select, textarea { font: inherit; }
     input, select, textarea { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; margin-bottom: 0.75rem; }
-    button { background: #2563eb; color: white; border: none; border-radius: 0.6rem; padding: 0.85rem 1rem; cursor: pointer; }
+    button { background: #2563eb; color: white; border: none; border-radius: 0.6rem; padding: 0.85rem 1rem; cursor: pointer; min-height: 44px; font-size: 1rem; }
     button.secondary { background: #6b7280; }
-    button.small { padding: 0.6rem 0.8rem; font-size: 0.95rem; }
+    button.small { padding: 0.6rem 0.8rem; font-size: 0.95rem; min-height: 40px; }
     .hidden { display: none; }
     .message { border-radius: 0.6rem; padding: 1rem; margin-bottom: 1rem; }
     .message.error { background: #fee2e2; color: #991b1b; }
     .message.success { background: #dcfce7; color: #166534; }
     .posting { border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1rem; }
     .posting h3 { margin-top: 0; }
-    .posting p { margin: 0.4rem 0; }
+    .posting p { margin: 0.4rem 0; font-size: 0.95rem; }
     .flex-row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    
+    /* Mobile-first improvements */
+    @media (max-width: 768px) {
+      body { font-size: 15px; }
+      header { padding: 0.75rem; }
+      header h1 { font-size: 1.3rem; }
+      header p { font-size: 0.85rem; }
+      .page { padding: 0.75rem; }
+      .box { padding: 0.75rem; }
+      h2 { font-size: 1.1rem; }
+      h3 { font-size: 1rem; }
+      input, select, textarea { padding: 0.65rem; }
+      button { padding: 0.75rem 0.9rem; min-height: 42px; }
+      .posting { padding: 0.75rem; margin-bottom: 0.75rem; }
+      .posting p { font-size: 0.9rem; }
+    }
+    
+    @media (max-width: 480px) {
+      body { font-size: 14px; }
+      header { padding: 0.5rem; }
+      header h1 { font-size: 1.1rem; margin-bottom: 0.25rem; }
+      header p { font-size: 0.8rem; }
+      .page { padding: 0.5rem; }
+      .grid { gap: 0.75rem; grid-template-columns: 1fr; }
+      .box { padding: 0.6rem; }
+      h2 { font-size: 1rem; margin-bottom: 0.75rem; }
+      h3 { font-size: 0.95rem; }
+      input, select, textarea { padding: 0.6rem; font-size: 16px; }
+      button { padding: 0.7rem 0.8rem; min-height: 40px; font-size: 0.95rem; }
+      button.small { padding: 0.5rem 0.7rem; min-height: 36px; font-size: 0.9rem; }
+      .flex-row { gap: 0.3rem; }
+      .posting { padding: 0.6rem; margin-bottom: 0.5rem; }
+      .posting p { font-size: 0.85rem; margin: 0.25rem 0; }
+      #dashboard .flex-row { flex-direction: column; align-items: flex-start; }
+      #dashboard .flex-row > div:last-child { align-self: flex-start; width: 100%; }
+      #dashboard .flex-row button { width: 100%; }
+      label { display: block; margin-top: 0.5rem; margin-bottom: 0.3rem; font-weight: 500; }
+    }
+    
+    /* Landscape mode adjustments */
+    @media (max-height: 600px) and (orientation: landscape) {
+      header { padding: 0.5rem; }
+      header h1 { font-size: 1.1rem; margin-bottom: 0; }
+      header p { display: none; }
+      .page { padding: 0.5rem; }
+    }
+    
+    /* Desktop layout for dashboard */
+    @media (min-width: 769px) {
+      #dashboard .flex-row { flex-direction: row !important; }
+      #dashboard .flex-row > div:last-child { width: auto !important; }
+      #dashboard .flex-row button { width: auto !important; }
+    }
+    
+    /* Mobile button stacking */
+    @media (max-width: 480px) {
+      .flex-row button { width: 100%; margin-bottom: 0.5rem; }
+      .action-button { width: 100% !important; }
+      form { display: flex; flex-direction: column; }
+      form label { margin-top: 0.5rem; }
+    }
   </style>
 </head>
 <body>
@@ -68,13 +134,13 @@
     </div>
 
     <section id="dashboard" class="box hidden">
-      <div class="flex-row" style="justify-content: space-between; gap: 1rem;">
+      <div class="flex-row" style="justify-content: space-between; gap: 1rem; flex-direction: column;">
         <div>
           <h2 id="welcome-title">Welcome</h2>
           <p id="user-summary"></p>
         </div>
-        <div>
-          <button id="logout-button" class="secondary">Logout</button>
+        <div style="width: 100%;">
+          <button id="logout-button" class="secondary" style="width: 100%;">Logout</button>
         </div>
       </div>
 
