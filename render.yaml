@@ -4,6 +4,5 @@ services:
     env: python
     plan: free
     region: oregon
-    buildCommand: cd attachment_api && python -m pip install --user -r requirements.txt
+    buildCommand: cd attachment_api && pip install -r requirements.txt
     startCommand: cd attachment_api && gunicorn config.wsgi:application --log-file -
-
