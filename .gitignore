@@ -1,0 +1,59 @@
+# Python
+*.py[cod]
+__pycache__/
+*.log
+*.pot
+*.py[cod]
+*.cover
+coverage.xml
+*.egg-info/
+dist/
+build/
+.env
+.env.*
+*.sqlite3
+db.sqlite3
+media/
+.vscode/
+*.iml
+.idea/
+
+# Django
+*.log
+*.pot
+*.py[cod]
+__pycache__/
+local_settings.py
+db.sqlite3
+/media
+/staticfiles
+
+# Flutter
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/pubspec.lock
+**/ios/Pods/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/macos/Flutter/ephemeral/
+**/android/.gradle/
+**/android/app/*.iml
+**/android/app/build/
+**/android/gradle/
+**/android/local.properties
+**/android/key.properties
+**/.idea/
+**/.DS_Store
+
+# Generated files
+*.class
+*.war
+*.ear
+
+# VS Code
+.history/

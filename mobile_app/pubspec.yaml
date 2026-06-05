@@ -1,0 +1,25 @@
+name: attachment_mobile
+description: Student mobile app for the Industrial Attachment & Placement System.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # HTTP client for talking to the Django REST API
+  http: ^1.2.0
+  # Lightweight state management (auth + shared state)
+  provider: ^6.1.2
+  # Secure on-device storage for the JWT tokens
+  flutter_secure_storage: ^9.2.2
+  # Date formatting for deadlines
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
