@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AttachMate Web</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #f7fafc; color: #1f2937; }
+    header { background: #2563eb; color: white; padding: 1.5rem 1rem; text-align: center; }
+    .page { max-width: 1080px; margin: 0 auto; padding: 1rem; }
+    .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .box { background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+    h1, h2, h3 { margin: 0 0 1rem; }
+    button, input, select, textarea { font: inherit; }
+    input, select, textarea { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; margin-bottom: 0.75rem; }
+    button { background: #2563eb; color: white; border: none; border-radius: 0.6rem; padding: 0.85rem 1rem; cursor: pointer; }
+    button.secondary { background: #6b7280; }
+    button.small { padding: 0.6rem 0.8rem; font-size: 0.95rem; }
+    .hidden { display: none; }
+    .message { border-radius: 0.6rem; padding: 1rem; margin-bottom: 1rem; }
+    .message.error { background: #fee2e2; color: #991b1b; }
+    .message.success { background: #dcfce7; color: #166534; }
+    .posting { border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1rem; }
+    .posting h3 { margin-top: 0; }
+    .posting p { margin: 0.4rem 0; }
+    .flex-row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AttachMate Web Portal</h1>
+    <p>Browse opportunities, register, login, and manage roles using the online site.</p>
+  </header>
+  <main class="page">
+    <div id="message" class="message hidden"></div>
+
+    <div id="logged-out" class="grid">
+      <section class="box" id="login-box">
+        <h2>Login</h2>
+        <form id="login-form">
+          <label>Email</label>
+          <input id="login-email" type="email" required>
+          <label>Password</label>
+          <input id="login-password" type="password" required>
+          <button type="submit">Login</button>
+        </form>
+      </section>
+
+      <section class="box" id="register-box">
+        <h2>Register</h2>
+        <form id="register-form">
+          <label>Email</label>
+          <input id="register-email" type="email" required>
+          <label>Password</label>
+          <input id="register-password" type="password" required>
+          <label>Name</label>
+          <input id="register-name" type="text">
+          <label>Phone</label>
+          <input id="register-phone" type="text">
+          <label>Role</label>
+          <select id="register-role" required>
+            <option value="student">Student</option>
+            <option value="company">Company</option>
+          </select>
+          <button type="submit">Register</button>
+        </form>
+      </section>
+    </div>
+
+    <section id="dashboard" class="box hidden">
+      <div class="flex-row" style="justify-content: space-between; gap: 1rem;">
+        <div>
+          <h2 id="welcome-title">Welcome</h2>
+          <p id="user-summary"></p>
+        </div>
+        <div>
+          <button id="logout-button" class="secondary">Logout</button>
+        </div>
+      </div>
+
+      <div id="student-panel" class="hidden">
+        <h3>Student actions</h3>
+        <p>Apply to approved opportunities below and track your applications.</p>
+        <div id="student-applications" class="box"></div>
+      </div>
+
+      <div id="company-panel" class="hidden">
+        <h3>Company dashboard</h3>
+        <form id="create-posting-form">
+          <label>Opportunity Title</label>
+          <input id="posting-title" type="text" required>
+          <label>Description</label>
+          <textarea id="posting-description" rows="4" required></textarea>
+          <label>Requirements</label>
+          <textarea id="posting-requirements" rows="3"></textarea>
+          <label>Location</label>
+          <input id="posting-location" type="text">
+          <label>Slots</label>
+          <input id="posting-slots" type="number" min="1" value="1">
+          <label>Deadline</label>
+          <input id="posting-deadline" type="date">
+          <button type="submit">Create Posting</button>
+        </form>
+        <div id="company-postings"></div>
+      </div>
+
+      <div id="admin-panel" class="hidden">
+        <h3>Admin review</h3>
+        <div id="admin-postings"></div>
+      </div>
+    </section>
+
+    <section class="box">
+      <h2>Open Opportunities</h2>
+      <div id="public-postings"></div>
+    </section>
+  </main>
+
+  <script>
+    const apiBase = '/api';
+    const tokenKey = 'attachmate_access_token';
+    const roleKey = 'attachmate_role';
+    const emailKey = 'attachmate_email';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('login-form').addEventListener('submit', onLogin);
+      document.getElementById('register-form').addEventListener('submit', onRegister);
+      document.getElementById('logout-button').addEventListener('click', onLogout);
+      document.getElementById('create-posting-form').addEventListener('submit', onCreatePosting);
+      refreshPage();
+    });
+
+    function showMessage(message, type = 'success') {
+      const el = document.getElementById('message');
+      el.textContent = message;
+      el.className = 'message ' + (type === 'error' ? 'error' : 'success');
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 7000);
+    }
+
+    function setAuth(token, role, email) {
+      localStorage.setItem(tokenKey, token);
+      localStorage.setItem(roleKey, role);
+      localStorage.setItem(emailKey, email || '');
+    }
+
+    function clearAuth() {
+      localStorage.removeItem(tokenKey);
+      localStorage.removeItem(roleKey);
+      localStorage.removeItem(emailKey);
+    }
+
+    function getAuthHeaders() {
+      const token = localStorage.getItem(tokenKey);
+      return token ? { 'Authorization': 'Bearer ' + token } : {};
+    }
+
+    async function apiFetch(path, options = {}) {
+      const headers = { ...options.headers, ...getAuthHeaders() };
+      const hasBody = options.body != null;
+      if (hasBody && !(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+      }
+      const response = await fetch(apiBase + path, { ...options, headers });
+      const text = await response.text();
+      let data;
+      try { data = text ? JSON.parse(text) : null; } catch (err) { data = text; }
+      if (!response.ok) {
+        const error = data && data.detail ? data.detail : data || response.statusText;
+        throw new Error(error);
+      }
+      return data;
+    }
+
+    async function refreshPage() {
+      const token = localStorage.getItem(tokenKey);
+      const loggedIn = Boolean(token);
+      document.getElementById('logged-out').style.display = loggedIn ? 'none' : 'grid';
+      document.getElementById('dashboard').style.display = loggedIn ? 'block' : 'none';
+      await loadPublicPostings();
+      if (loggedIn) {
+        await loadUserProfile();
+      }
+    }
+
+    async function onLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      try {
+        const data = await apiFetch('/auth/login/', {
+          method: 'POST',
+          body: JSON.stringify({ email, password }),
+        });
+        setAuth(data.access, data.role, data.email);
+        showMessage('Logged in successfully.');
+        refreshPage();
+      } catch (error) {
+        showMessage('Login failed: ' + error.message, 'error');
+      }
+    }
+
+    async function onRegister(event) {
+      event.preventDefault();
+      const email = document.getElementById('register-email').value.trim();
+      const password = document.getElementById('register-password').value;
+      const name = document.getElementById('register-name').value.trim();
+      const phone = document.getElementById('register-phone').value.trim();
+      const role = document.getElementById('register-role').value;
+      try {
+        await apiFetch('/auth/register/', {
+          method: 'POST',
+          body: JSON.stringify({ email, password, name, phone, role }),
+        });
+        showMessage('Registration completed. Please login.');
+        document.getElementById('register-form').reset();
+      } catch (error) {
+        showMessage('Registration failed: ' + error.message, 'error');
+      }
+    }
+
+    async function onLogout() {
+      clearAuth();
+      showMessage('Logged out.');
+      refreshPage();
+    }
+
+    async function loadUserProfile() {
+      try {
+        const user = await apiFetch('/auth/me/', { method: 'GET' });
+        localStorage.setItem(roleKey, user.role);
+        localStorage.setItem(emailKey, user.email);
+        document.getElementById('welcome-title').textContent = `Welcome, ${user.email}`;
+        document.getElementById('user-summary').textContent = `Role: ${user.role}`;
+        updateRolePanels(user.role);
+      } catch (error) {
+        clearAuth();
+        showMessage('Session expired. Please login again.', 'error');
+        refreshPage();
+      }
+    }
+
+    function updateRolePanels(role) {
+      document.getElementById('student-panel').classList.toggle('hidden', role !== 'student');
+      document.getElementById('company-panel').classList.toggle('hidden', role !== 'company');
+      document.getElementById('admin-panel').classList.toggle('hidden', role !== 'admin');
+      if (role === 'student') {
+        loadStudentApplications();
+      }
+      if (role === 'company') {
+        loadCompanyPostings();
+      }
+      if (role === 'admin') {
+        loadAdminPendingPostings();
+      }
+    }
+
+    function formatDate(dateString) {
+      return dateString ? new Date(dateString).toLocaleDateString() : 'No deadline';
+    }
+
+    function renderPostings(list, targetId, includeAction) {
+      const target = document.getElementById(targetId);
+      if (!list.length) {
+        target.innerHTML = '<p>No opportunities found.</p>';
+        return;
+      }
+      target.innerHTML = list.map(posting => {
+        const status = posting.status ? `Status: ${posting.status}` : '';
+        const details = `Company: ${posting.company_name || ''} · Location: ${posting.location || 'Any'} · Slots: ${posting.slots || 1}`;
+        const actionButton = includeAction ? `<div class="flex-row"><button data-posting-id="${posting.id}" class="action-button small">${posting.actionLabel}</button></div>` : '';
+        return `<article class="posting"><h3>${posting.title}</h3><p>${posting.description}</p><p>${details}</p><p>${status}</p>${actionButton}</article>`;
+      }).join('');
+      if (includeAction) {
+        target.querySelectorAll('.action-button').forEach(button => {
+          button.addEventListener('click', async () => {
+            const postingId = button.dataset.postingId;
+            if (button.textContent === 'Apply') {
+              await applyToPosting(postingId);
+            } else if (button.textContent === 'Approve') {
+              await changePostingStatus(postingId, 'approve');
+            } else if (button.textContent === 'Reject') {
+              await changePostingStatus(postingId, 'reject');
+            }
+          });
+        });
+      }
+    }
+
+    async function loadPublicPostings() {
+      try {
+        const list = await fetch(apiBase + '/postings/').then(r => r.ok ? r.json() : Promise.reject('Unable to load jobs'));
+        const role = localStorage.getItem(roleKey);
+        if (!list.length) {
+          document.getElementById('public-postings').innerHTML = '<p>No approved postings are available yet.</p>';
+          return;
+        }
+        const postings = list.map(posting => ({
+          ...posting,
+          actionLabel: role === 'student' ? 'Apply' : null,
+        }));
+        renderPostings(postings, 'public-postings', role === 'student');
+      } catch (error) {
+        document.getElementById('public-postings').innerHTML = '<p>Unable to load open opportunities.</p>';
+      }
+    }
+
+    async function loadStudentApplications() {
+      try {
+        const applications = await apiFetch('/applications/', { method: 'GET' });
+        const target = document.getElementById('student-applications');
+        if (!applications.length) {
+          target.innerHTML = '<p>No applications found yet.</p>';
+          return;
+        }
+        target.innerHTML = `<h4>Your applications</h4>${applications.map(item => `
+          <article class="posting">
+            <h3>${item.posting_title}</h3>
+            <p>Status: ${item.status}</p>
+            <p>Applied: ${new Date(item.created_at).toLocaleDateString()}</p>
+          </article>
+        `).join('')}`;
+      } catch (error) {
+        document.getElementById('student-applications').innerHTML = '<p>Unable to load your applications.</p>';
+      }
+    }
+
+    async function loadCompanyPostings() {
+      try {
+        const postings = await apiFetch('/postings/', { method: 'GET' });
+        const target = document.getElementById('company-postings');
+        if (!postings.length) {
+          target.innerHTML = '<p>No postings found.</p>';
+          return;
+        }
+        target.innerHTML = `<h4>Your postings</h4>` + postings.map(item => `
+          <article class="posting">
+            <h3>${item.title}</h3>
+            <p>${item.description}</p>
+            <p>Location: ${item.location || 'Any'}</p>
+            <p>Status: ${item.status}</p>
+            <p>Deadline: ${formatDate(item.deadline)}</p>
+          </article>
+        `).join('');
+      } catch (error) {
+        document.getElementById('company-postings').innerHTML = '<p>Unable to load your postings.</p>';
+      }
+    }
+
+    async function loadAdminPendingPostings() {
+      try {
+        const postings = await apiFetch('/postings/', { method: 'GET' });
+        const pending = postings.filter(item => item.status === 'pending');
+        if (!pending.length) {
+          document.getElementById('admin-postings').innerHTML = '<p>No pending postings at the moment.</p>';
+          return;
+        }
+        document.getElementById('admin-postings').innerHTML = pending.map(posting => `
+          <article class="posting">
+            <h3>${posting.title}</h3>
+            <p>${posting.description}</p>
+            <p>Company: ${posting.company_name || 'Unknown'}</p>
+            <p>Location: ${posting.location || 'Any'}</p>
+            <div class="flex-row">
+              <button data-posting-id="${posting.id}" class="action-button small">Approve</button>
+              <button data-posting-id="${posting.id}" class="action-button small secondary">Reject</button>
+            </div>
+          </article>
+        `).join('');
+        document.querySelectorAll('#admin-postings .action-button').forEach(button => {
+          button.addEventListener('click', async () => {
+            const id = button.dataset.postingId;
+            const action = button.textContent.toLowerCase();
+            await changePostingStatus(id, action);
+          });
+        });
+      } catch (error) {
+        document.getElementById('admin-postings').innerHTML = '<p>Unable to load pending postings.</p>';
+      }
+    }
+
+    async function onCreatePosting(event) {
+      event.preventDefault();
+      const title = document.getElementById('posting-title').value.trim();
+      const description = document.getElementById('posting-description').value.trim();
+      const requirements = document.getElementById('posting-requirements').value.trim();
+      const location = document.getElementById('posting-location').value.trim();
+      const slots = parseInt(document.getElementById('posting-slots').value, 10) || 1;
+      const deadline = document.getElementById('posting-deadline').value || null;
+      try {
+        await apiFetch('/postings/', {
+          method: 'POST',
+          body: JSON.stringify({ title, description, requirements, location, slots, deadline }),
+        });
+        showMessage('Posting created and awaiting admin approval.');
+        document.getElementById('create-posting-form').reset();
+        loadCompanyPostings();
+      } catch (error) {
+        showMessage('Unable to create posting: ' + error.message, 'error');
+      }
+    }
+
+    async function applyToPosting(postingId) {
+      try {
+        await apiFetch('/applications/', {
+          method: 'POST',
+          body: JSON.stringify({ posting: postingId, cover_letter: 'Applied via web portal' }),
+        });
+        showMessage('Application submitted successfully.');
+      } catch (error) {
+        showMessage('Unable to apply: ' + error.message, 'error');
+      }
+    }
+
+    async function changePostingStatus(postingId, action) {
+      try {
+        await apiFetch(`/postings/${postingId}/${action}/`, { method: 'POST' });
+        showMessage(`Posting ${action}d successfully.`);
+        loadAdminPendingPostings();
+      } catch (error) {
+        showMessage('Unable to update posting: ' + error.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>
